@@ -7,7 +7,7 @@ import torch.nn as nn
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class GaussianPosterior:
+class GaussianPosterior(nn.Module):
     def __init__(self, in_features: int, out_features: int, bias: bool) -> None:
         """
         Initialize variational parameters of variational posterior distribution
@@ -16,6 +16,7 @@ class GaussianPosterior:
         :param out_features: Output features of the Linear Layer
         :param bias: Boolean to initialize vector of weights or matrix of weights
         """
+        super().__init__()
 
         # Initialize parameters uniformly within a range
         if bias:
@@ -29,9 +30,6 @@ class GaussianPosterior:
             # rho = log(exp(sigma) - 1) -- Init sigma ~ U(0.001, 1) or rho ~ U(-7, -4.5)
             self.rho = nn.Parameter(torch.Tensor(out_features, in_features).uniform_(-7, -4.5), requires_grad=True)
 
-        # Move everything to device
-        self.mu = self.mu.to(device)
-        self.rho = self.rho.to(device)
         # eps ~ N(0, 1)
         self.normal = Normal(0, 1)
 
