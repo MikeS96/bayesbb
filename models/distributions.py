@@ -4,11 +4,9 @@ import torch
 from torch.distributions import Normal
 import torch.nn as nn
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 class GaussianPosterior(nn.Module):
-    def __init__(self, in_features: int, out_features: int, bias: bool) -> None:
+    def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
         """
         Initialize variational parameters of variational posterior distribution
 
@@ -31,7 +29,13 @@ class GaussianPosterior(nn.Module):
             self.rho = nn.Parameter(torch.Tensor(out_features, in_features).uniform_(-7, -4.5), requires_grad=True)
 
         # eps ~ N(0, 1)
-        self.normal = Normal(0, 1)
+        self.register_buffer("mean", torch.tensor(0.))
+        self.register_buffer("std", torch.tensor(1.))
+        self.normal = Normal(self.mean, self.std)
+
+    def to(self, *args, **kwargs):
+        super().to(*args, **kwargs)
+        self.normal = Normal(self.mean, self.std)
 
     @property
     def rho2sigma(self) -> torch.Tensor:
@@ -49,7 +53,7 @@ class GaussianPosterior(nn.Module):
         :return: Tensor of Sampled parameters from variational posterior
         """
         # Sample parameter-free noise epsilon
-        eps = self.normal.sample(self.mu.size()).to(device)
+        eps = self.normal.sample(self.mu.size())
         param = self.mu + self.rho2sigma * eps
         return param
 
@@ -65,19 +69,27 @@ class GaussianPosterior(nn.Module):
         return logp_var_post
 
 
-class MixturePrior:
+class MixturePrior(nn.Module):
     def __init__(self, log_sigma1: float = 0, log_sigma2: float = 6, pi: float = 1 / 4) -> None:
         """
         :param log_sigma1: -log(sigma1) parameter for 1 gaussian component
         :param log_sigma2: -log(sigma2) parameter for 2 gaussian component
         :param pi: Mix probability in mixture
         """
-        self.sigma1 = torch.FloatTensor([np.exp(-log_sigma1)]).to(device)
-        self.sigma2 = torch.FloatTensor([np.exp(-log_sigma2)]).to(device)
+        super().__init__()
+
+        self.register_buffer("mean", torch.tensor(0.))
+        self.register_buffer("std1", torch.FloatTensor([np.exp(-log_sigma1)]))
+        self.register_buffer("std2", torch.FloatTensor([np.exp(-log_sigma2)]))
         self.pi = pi
         # Define mixture components
-        self.normal1 = Normal(0, self.sigma1)
-        self.normal2 = Normal(0, self.sigma2)
+        self.normal1 = Normal(self.mean, self.std1)
+        self.normal2 = Normal(self.mean, self.std2)
+
+    def to(self, *args, **kwargs):
+        super().to(*args, **kwargs)
+        self.normal1 = Normal(self.mean, self.std1)
+        self.normal2 = Normal(self.mean, self.std2)
 
     def log_prob(self, w: torch.Tensor) -> torch.Tensor:
         """
@@ -92,15 +104,22 @@ class MixturePrior:
         return logp_prior
 
 
-class NormalPrior:
+class NormalPrior(nn.Module):
     def __init__(self, log_sigma: float = -3) -> None:
         """
         :param log_sigma: -log(sigma) parameter for gaussian
         """
+        super().__init__()
+
         # -log_simga = -3 -> sigma = 20
-        self.sigma = torch.FloatTensor([np.exp(-log_sigma)]).to(device)
+        self.register_buffer("mean", torch.tensor(0.))
+        self.register_buffer("std", torch.FloatTensor([np.exp(-log_sigma)]))
         # Define normal distribution
-        self.normal = Normal(0, self.sigma)
+        self.normal = Normal(self.mean, self.std)
+
+    def to(self, *args, **kwargs):
+        super().to(*args, **kwargs)
+        self.normal = Normal(self.mean, self.std)
 
     def log_prob(self, w: torch.Tensor) -> torch.Tensor:
         """
