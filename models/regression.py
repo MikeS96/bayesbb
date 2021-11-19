@@ -7,7 +7,7 @@ from torch.distributions import Normal
 from typing import Tuple
 
 # File with distributions
-import models.dist as dst
+import models.distributions as dist
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -32,17 +32,17 @@ class BNNLinear(nn.Module):
         self.out_features = out_features
 
         # Initialize variational parameters for w
-        self.w = dst.GaussianPosterior(in_features, out_features, bias=False)
+        self.w = dist.GaussianPosterior(in_features, out_features, bias=False)
         # Initialize variational parameters for b
-        self.b = dst.GaussianPosterior(in_features, out_features, bias=True)
+        self.b = dist.GaussianPosterior(in_features, out_features, bias=True)
         # Initialize priors
         if mixture_prior:
             log_sigma1, log_sigma2, pi = mixture_params
-            self.w_prior = dst.MixturePrior(log_sigma1, log_sigma2, pi)
-            self.b_prior = dst.MixturePrior(log_sigma1, log_sigma2, pi)
+            self.w_prior = dist.MixturePrior(log_sigma1, log_sigma2, pi)
+            self.b_prior = dist.MixturePrior(log_sigma1, log_sigma2, pi)
         else:
-            self.w_prior = dst.NormalPrior(normal_params)
-            self.b_prior = dst.NormalPrior(normal_params)
+            self.w_prior = dist.NormalPrior(normal_params)
+            self.b_prior = dist.NormalPrior(normal_params)
         self.log_prior = 0
         self.log_posterior = 0
 
