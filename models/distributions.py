@@ -28,14 +28,9 @@ class GaussianPosterior(nn.Module):
             # rho = log(exp(sigma) - 1) -- Init sigma ~ U(0.001, 1) or rho ~ U(-7, -4.5)
             self.rho = nn.Parameter(torch.Tensor(out_features, in_features).uniform_(-7, -4.5), requires_grad=True)
 
-        # eps ~ N(0, 1)
+        # eps ~ N(0, 1) - Parameters to sample proposal distribution eps
         self.register_buffer("mean", torch.tensor(0.))
         self.register_buffer("std", torch.tensor(1.))
-        self.normal = Normal(self.mean, self.std)
-
-    def to(self, *args, **kwargs):
-        super().to(*args, **kwargs)
-        self.normal = Normal(self.mean, self.std)
 
     @property
     def rho2sigma(self) -> torch.Tensor:
@@ -53,7 +48,7 @@ class GaussianPosterior(nn.Module):
         :return: Tensor of Sampled parameters from variational posterior
         """
         # Sample parameter-free noise epsilon
-        eps = self.normal.sample(self.mu.size())
+        eps = Normal(self.mean, self.std).sample(self.mu.size())
         param = self.mu + self.rho2sigma * eps
         return param
 
@@ -78,18 +73,11 @@ class MixturePrior(nn.Module):
         """
         super().__init__()
 
+        # Parameters mixture components
         self.register_buffer("mean", torch.tensor(0.))
         self.register_buffer("std1", torch.FloatTensor([np.exp(-log_sigma1)]))
         self.register_buffer("std2", torch.FloatTensor([np.exp(-log_sigma2)]))
         self.pi = pi
-        # Define mixture components
-        self.normal1 = Normal(self.mean, self.std1)
-        self.normal2 = Normal(self.mean, self.std2)
-
-    def to(self, *args, **kwargs):
-        super().to(*args, **kwargs)
-        self.normal1 = Normal(self.mean, self.std1)
-        self.normal2 = Normal(self.mean, self.std2)
 
     def log_prob(self, w: torch.Tensor) -> torch.Tensor:
         """
@@ -98,8 +86,9 @@ class MixturePrior(nn.Module):
         :param w: Set of weights drawn out of posterior distribution
         :return: log probability of given set of weights over mixture prior
         """
-        p_prior_1 = torch.exp(self.normal1.log_prob(w))
-        p_prior_2 = torch.exp(self.normal2.log_prob(w))
+        # Evaluate mixture components
+        p_prior_1 = torch.exp(Normal(self.mean, self.std1).log_prob(w))
+        p_prior_2 = torch.exp(Normal(self.mean, self.std2).log_prob(w))
         logp_prior = torch.log(self.pi * p_prior_1 + (1 - self.pi) * p_prior_2).sum()
         return logp_prior
 
@@ -111,15 +100,10 @@ class NormalPrior(nn.Module):
         """
         super().__init__()
 
+        # Define normal distribution
         # -log_simga = -3 -> sigma = 20
         self.register_buffer("mean", torch.tensor(0.))
         self.register_buffer("std", torch.FloatTensor([np.exp(-log_sigma)]))
-        # Define normal distribution
-        self.normal = Normal(self.mean, self.std)
-
-    def to(self, *args, **kwargs):
-        super().to(*args, **kwargs)
-        self.normal = Normal(self.mean, self.std)
 
     def log_prob(self, w: torch.Tensor) -> torch.Tensor:
         """
@@ -128,5 +112,5 @@ class NormalPrior(nn.Module):
         :param w: Set of weights drawn out of posterior distribution
         :return: log probability of given set of weights over gaussian prior
         """
-        logp_prior = self.normal.log_prob(w).sum()
+        logp_prior = Normal(self.mean, self.std).log_prob(w).sum()
         return logp_prior

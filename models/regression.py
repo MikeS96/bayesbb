@@ -9,8 +9,6 @@ from typing import Tuple
 # File with distributions
 import models.distributions as dist
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 class BNNLinear(nn.Module):
     def __init__(self, in_features: int, out_features: int,
@@ -32,9 +30,9 @@ class BNNLinear(nn.Module):
         self.out_features = out_features
 
         # Initialize variational parameters for w
-        self.w = dist.GaussianPosterior(in_features, out_features, bias=False)
+        self.w = dist.GaussianPosterior(self.in_features, self.out_features, bias=False)
         # Initialize variational parameters for b
-        self.b = dist.GaussianPosterior(in_features, out_features, bias=True)
+        self.b = dist.GaussianPosterior(self.in_features, self.out_features, bias=True)
         # Initialize priors
         if mixture_prior:
             log_sigma1, log_sigma2, pi = mixture_params
@@ -96,23 +94,25 @@ class BayesianRegressor(nn.Module):
         self.l2 = BNNLinear(in_features=self.hidden_dim, out_features=1, mixture_params=mixture_params,
                             normal_params=normal_params, mixture_prior=mixture_prior)
 
+    @property
     def log_prior(self) -> torch.Tensor:
         """
         Compute the Log Prior probability of the model in one forward pass.
         :return: Log prior probability of the model in one forward pass
         """
-        log_prior = torch.zeros(1).to(device)
+        log_prior = 0
         # Sum the prior over all layers of the model
         for layer in self.children():
             log_prior += layer.log_prior
         return log_prior
 
+    @property
     def log_posterior(self) -> torch.Tensor:
         """
         Compute the Log posterior probability of the model in one forward pass.
         :return: Log posterior probability of the model in one forward pass
         """
-        log_posterior = torch.zeros(1).to(device)
+        log_posterior = 0
         # Sum the posterior over all layers of the model
         for layer in self.children():
             log_posterior += layer.log_posterior
@@ -139,14 +139,14 @@ class BayesianRegressor(nn.Module):
         """
         # Initialization
         batch_size = target.shape[0]
-        outputs = torch.zeros(samples, batch_size).to(device)
-        log_priors = torch.zeros(samples).to(device)
-        log_posteriors = torch.zeros(samples).to(device)
-        log_likelihoods = torch.zeros(samples).to(device)
+        outputs = torch.zeros(samples, batch_size).to(x.device)
+        log_priors = torch.zeros(samples).to(x.device)
+        log_posteriors = torch.zeros(samples).to(x.device)
+        log_likelihoods = torch.zeros(samples).to(x.device)
         for i in range(samples):
             outputs[i] = self.forward(x).view(-1)  # Forward pass
-            log_priors[i] = self.log_prior()  # Compute log prior of current forward pass
-            log_posteriors[i] = self.log_posterior()  # Compute log posterior of current forward pass
+            log_priors[i] = self.log_prior  # Compute log prior of current forward pass
+            log_posteriors[i] = self.log_posterior  # Compute log posterior of current forward pass
             log_likelihoods[i] = Normal(outputs[i], self.var_gauss).log_prob(target.view(-1)).sum()  # log-likelihood
         total_loss = log_posteriors.mean() - log_priors.mean() - log_likelihoods.mean()
         return total_loss
