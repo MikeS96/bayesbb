@@ -62,7 +62,7 @@ class BayesianMnist(nn.Module):
         out = F.softmax(x, dim=1)
         return out
 
-    def energy_loss(self, x: torch.Tensor, target: torch.Tensor,
+    def energy_loss(self, x: torch.Tensor, target: torch.Tensor, num_batches: int,
                     num_classes: int, samples: int) -> torch.Tensor:
         """
         Compute the Energy loss for a given batch
@@ -74,14 +74,19 @@ class BayesianMnist(nn.Module):
         # Initialization
 
         batch_size = target.shape[0]
+        outputs_to_save = np.zeros((samples, batch_size, num_classes))
         log_priors = torch.zeros(samples).to(x.device)
         log_posteriors = torch.zeros(samples).to(x.device)
         log_likelihoods = torch.zeros(samples, batch_size).to(x.device)
         for i in range(samples):
             outputs = self.forward(x)  # Forward pass
+            outputs_to_save[i] = outputs.detach().numpy()
             log_priors[i] = self.log_prior  # Compute log prior of current forward pass
             log_posteriors[i] = self.log_posterior  # Compute log posterior of current forward pass
             log_likelihoods[i] = Categorical(outputs).log_prob(target)  # log-likelihood
-
-        total_loss = log_posteriors.mean() - log_priors.mean() -  1/(batch_size)*log_likelihoods.mean(axis=0).sum()
-        return total_loss
+            
+        total_loss = (1/num_batches)*(log_posteriors.mean() - log_priors.mean()) - log_likelihoods.mean(axis=0).sum()
+        outputs_to_save = outputs_to_save.mean(axis=0)
+        pred = outputs_to_save.argmax(axis=1)
+        accuracy = sum(pred == target.numpy())/len(target)
+        return total_loss, accuracy
