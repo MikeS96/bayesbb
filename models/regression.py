@@ -8,6 +8,7 @@ from typing import Tuple
 
 from models.layers import BNNLinear
 
+
 class BayesianRegressor(nn.Module):
     def __init__(self, hidden_dim: int = 64, var_gauss: int = 0.2,
                  mixture_params: Tuple = (0, 6, 1 / 4), normal_params: float = -3,
