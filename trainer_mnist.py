@@ -1,23 +1,58 @@
+# run as python trainer_minist.py without sacred logging
+# run as python trainer_mnist.py --observe with sacred / neptune logging
+import os
+import argparse
 import torch
 import torch.optim as optim
 import torchvision
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
+
 from models.mnist import BayesianMnist
+
+from sacred import Experiment
+from sacred.observers import MongoObserver
+from sacred.observers import FileStorageObserver
+from neptune.new.integrations.sacred import NeptuneObserver
+import neptune.new as neptune
+
+from models.mnist import BayesianMnist
+
+token = os.environ.get("NEPTUNE_API_TOKEN")
+
+ex = Experiment()
+parser = argparse.ArgumentParser()
+parser.add_argument("--observe", action="store_true")
+args = parser.parse_args()
+if args.observe:
+    nep_run = neptune.init(api_token=token, project='bbb')
+    ex.observers.append(FileStorageObserver("sacred_files"))
+    ex.observers.append(NeptuneObserver(run=nep_run))
+    print("*****Observing runs*****")
+else:
+    print("*****Not oberving runs*****")
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_data = torchvision.datasets.MNIST(root="~/data", train=True,
                                         download=True,
                                         transform=transforms.Compose([
-                                            transforms.ToTensor()]
-                                        ))
+                                            transforms.ToTensor()]))
 
 test_data = torchvision.datasets.MNIST(root="~/data", train=False,
                                        download=True,
                                        transform=transforms.Compose([
-                                           transforms.ToTensor()]
-                                       ))
+                                           transforms.ToTensor()]))
+
+@ex.config
+def config():
+    num_epochs = 10
+    batch_size = 28
+    elbo_samples = 4
+    cuda = False
+
+@ex.main
 
 def train(elbo_samples, batch_size, num_epochs, cuda):
     device = torch.device("cuda" if cuda else "cpu")
@@ -60,4 +95,6 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
         print("total loss for epoch {} : {} ".format(epoch, epoch_loss))
 
 
-train(num_epochs=10, batch_size=28,  elbo_samples=3, cuda=False)
+ex.run()
+nep_run.stop()
+
