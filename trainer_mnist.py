@@ -19,13 +19,13 @@ import neptune.new as neptune
 
 from models.mnist import BayesianMnist
 
-token = os.environ.get("NEPTUNE_API_TOKEN")
 
 ex = Experiment()
 parser = argparse.ArgumentParser()
 parser.add_argument("--observe", action="store_true")
 args = parser.parse_args()
 if args.observe:
+    token = os.environ.get("NEPTUNE_API_TOKEN")
     nep_run = neptune.init(api_token=token, project='bbb')
     ex.observers.append(FileStorageObserver("sacred_files"))
     ex.observers.append(NeptuneObserver(run=nep_run))
