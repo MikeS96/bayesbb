@@ -6,8 +6,9 @@ from torchvision import transforms
 
 from models.mnist import BayesianMnist
 #
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("using")
+print(device)
 train_data = torchvision.datasets.MNIST(root="~/data", train=True,
                                         download=True,
                                         transform=transforms.Compose([
