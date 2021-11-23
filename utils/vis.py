@@ -2,10 +2,17 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from typing import Tuple
+
 plt.style.use('seaborn-white')
 
 
-def weights_histogram(model) -> None:
+def weights_histogram(model) -> Tuple:
+    """
+
+    :param model: Bayesian torch model
+    :return: List with weights and biases of the model
+    """
     # Initialize variables to store weights and biases of the model
     weights = []  # Only weights
     biases = []  # Only biases
@@ -23,3 +30,5 @@ def weights_histogram(model) -> None:
     sns.histplot(data=np.array(biases), kde=True, ax=axs[1]).set(title='Histogram of Biases')
     sns.histplot(data=np.array(params), kde=True, ax=axs[2]).set(title='Histogram of Parameters')
     plt.show()
+
+    return weights, biases

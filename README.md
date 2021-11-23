@@ -16,4 +16,12 @@ pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu
 pip3 install matplotlib
 pip3 install seaborn
 pip3 install neptune-client
+pip install neptune-sacred
+pip install sacred
+pip install pymango
+```
+
+Adding Neptune API KEY to variables
+```
+echo export 'NEPTUNE_API_TOKEN="<NEPTUNE_API_KEY_HERE>"' >> ~/.bashrc
 ```

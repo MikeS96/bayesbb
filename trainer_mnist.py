@@ -8,9 +8,6 @@ import torchvision
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-
-from models.mnist import BayesianMnist
-
 from sacred import Experiment
 from sacred.observers import MongoObserver
 from sacred.observers import FileStorageObserver
@@ -18,7 +15,6 @@ from neptune.new.integrations.sacred import NeptuneObserver
 import neptune.new as neptune
 
 from models.mnist import BayesianMnist
-
 
 ex = Experiment()
 parser = argparse.ArgumentParser()
@@ -33,7 +29,6 @@ if args.observe:
 else:
     print("*****Not oberving runs*****")
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_data = torchvision.datasets.MNIST(root="~/data", train=True,
                                         download=True,
@@ -45,6 +40,7 @@ test_data = torchvision.datasets.MNIST(root="~/data", train=False,
                                        transform=transforms.Compose([
                                            transforms.ToTensor()]))
 
+
 @ex.config
 def config():
     num_epochs = 10
@@ -52,11 +48,11 @@ def config():
     elbo_samples = 4
     cuda = False
 
-@ex.main
 
+@ex.main
 def train(elbo_samples, batch_size, num_epochs, cuda):
     device = torch.device("cuda" if cuda else "cpu")
-    model = BayesianMnist(28*28).to(device)
+    model = BayesianMnist(28 * 28).to(device)
     optimiser = optim.Adam(model.parameters(), lr=0.01)
     num_classes = 10
     loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
@@ -69,7 +65,7 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
         epoch_loss = 0
         for x_train, y_train in loader_train:
             x_train = x_train.reshape(batch_size, -1).to(device)
-            y_train = y_train.to(device)        
+            y_train = y_train.to(device)
             optimiser.zero_grad()
             loss, accuracy = model.energy_loss(
                 x_train, y_train, num_train_batches, num_classes, elbo_samples)
@@ -97,4 +93,3 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
 
 ex.run()
 nep_run.stop()
-
