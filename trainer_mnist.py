@@ -21,18 +21,6 @@ from models.mnist import BayesianMnist
 
 
 ex = Experiment()
-parser = argparse.ArgumentParser()
-parser.add_argument("--observe", action="store_true")
-args = parser.parse_args()
-if args.observe:
-    token = os.environ.get("NEPTUNE_API_TOKEN")
-    nep_run = neptune.init(api_token=token, project='bbb')
-    ex.observers.append(FileStorageObserver("sacred_files"))
-    ex.observers.append(NeptuneObserver(run=nep_run))
-    print("*****Observing runs*****")
-else:
-    print("*****Not oberving runs*****")
-
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_data = torchvision.datasets.MNIST(root="~/data", train=True,
@@ -47,13 +35,21 @@ test_data = torchvision.datasets.MNIST(root="~/data", train=False,
 
 @ex.config
 def config():
+    observe = True
+    if observe:
+        token = os.environ.get("NEPTUNE_API_TOKEN")
+        nep_run = neptune.init(api_token=token, project='bbb')
+        ex.observers.append(FileStorageObserver("sacred_files"))
+        ex.observers.append(NeptuneObserver(run=nep_run))
+        print("*****Observing runs*****")
+    else:
+        print("*****Not oberving runs*****")
     num_epochs = 10
     batch_size = 28
     elbo_samples = 4
     cuda = False
 
-@ex.main
-
+@ex.automain
 def train(elbo_samples, batch_size, num_epochs, cuda):
     device = torch.device("cuda" if cuda else "cpu")
     model = BayesianMnist(28*28).to(device)
@@ -95,6 +91,5 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
         print("total loss for epoch {} : {} ".format(epoch, epoch_loss))
 
 
-ex.run()
+ex.run_commandLine()
 nep_run.stop()
-
