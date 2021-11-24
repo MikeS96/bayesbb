@@ -1,5 +1,7 @@
-# run as python trainer_minist.py without sacred logging
-# run as python trainer_mnist.py --observe with sacred / neptune logging
+# run as python trainer_minist.py with "observe=False" without sacred logging
+# run as python trainer_mnist.py with sacred / neptune logging
+# write over config parameters using the command line ie python trainer_mnist.py with "elbo_samples=10"
+
 import os
 import argparse
 import torch
@@ -8,9 +10,6 @@ import torchvision
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-
-from models.mnist import BayesianMnist
-
 from sacred import Experiment
 from sacred.observers import MongoObserver
 from sacred.observers import FileStorageObserver
@@ -18,7 +17,6 @@ from neptune.new.integrations.sacred import NeptuneObserver
 import neptune.new as neptune
 
 from models.mnist import BayesianMnist
-
 
 ex = Experiment()
 
@@ -32,6 +30,7 @@ test_data = torchvision.datasets.MNIST(root="~/data", train=False,
                                        download=True,
                                        transform=transforms.Compose([
                                            transforms.ToTensor()]))
+
 
 @ex.config
 def config():
@@ -52,7 +51,7 @@ def config():
 @ex.automain
 def train(elbo_samples, batch_size, num_epochs, cuda):
     device = torch.device("cuda" if cuda else "cpu")
-    model = BayesianMnist(28*28).to(device)
+    model = BayesianMnist(28 * 28).to(device)
     optimiser = optim.Adam(model.parameters(), lr=0.01)
     num_classes = 10
     loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
@@ -65,7 +64,7 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
         epoch_loss = 0
         for x_train, y_train in loader_train:
             x_train = x_train.reshape(batch_size, -1).to(device)
-            y_train = y_train.to(device)        
+            y_train = y_train.to(device)
             optimiser.zero_grad()
             loss, accuracy = model.energy_loss(
                 x_train, y_train, num_train_batches, num_classes, elbo_samples)

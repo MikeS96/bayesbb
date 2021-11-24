@@ -5,6 +5,7 @@ from typing import Tuple
 
 import models.distributions as dist
 
+
 class BNNLinear(nn.Module):
     def __init__(self, in_features: int, out_features: int,
                  mixture_params: Tuple = (0, 6, 1 / 4), normal_params: float = -3,
@@ -67,4 +68,3 @@ class BNNLinear(nn.Module):
         # Forward pass
         out = F.linear(x, w, b)
         return out
-
