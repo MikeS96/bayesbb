@@ -3,7 +3,6 @@
 # write over config parameters using the command line ie python trainer_mnist.py with "elbo_samples=10"
 
 import os
-import argparse
 import torch
 import torch.optim as optim
 import torchvision
@@ -75,6 +74,8 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
             if batch_number % 400 == 0:
                 print("batch number: {} batch TRAIN loss: {} ".format(batch_number, loss.item()))
                 print("batch number: {} batch TRAIN accuracy: {} ".format(batch_number, accuracy))
+                ex.log_scalar("batch train loss", loss.item())
+                ex.log_scalar("batch train accuracy", accuracy)
                 total_test_loss = 0
                 for x_test, y_test in loader_test:
                     x_test = x_test.reshape(batch_size, -1).to(device)
@@ -86,7 +87,8 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
                     "batch number {} batch TEST loss: {} ".format(batch_number, batch_test_loss))
                 print(
                     "batch number {} batch TEST acc: {} ".format(batch_number, batch_test_accuracy))
-
+                ex.log_scalar("batch test loss", loss.item())
+                ex.log_scalar("batch test accuracy", accuracy)
         print("total loss for epoch {} : {} ".format(epoch, epoch_loss))
 
 
