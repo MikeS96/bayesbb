@@ -82,6 +82,6 @@ class BayesianRegressor(nn.Module):
             outputs[i] = self.forward(x).view(-1)  # Forward pass
             log_priors[i] = self.log_prior  # Compute log prior of current forward pass
             log_posteriors[i] = self.log_posterior  # Compute log posterior of current forward pass
-            log_likelihoods[i] = Normal(outputs[i], self.ll_var).log_prob(target.view(-1)).sum()  # log-likelihood
+            log_likelihoods[i] = Normal(outputs[i], np.sqrt(self.ll_var)).log_prob(target.view(-1)).sum()  # log-likelihood
         total_loss = log_posteriors.mean() - log_priors.mean() - log_likelihoods.mean()
         return total_loss
