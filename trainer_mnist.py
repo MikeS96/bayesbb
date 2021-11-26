@@ -92,5 +92,5 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
         print("total loss for epoch {} : {} ".format(epoch, epoch_loss))
 
 
-ex.run_commandLine()
+ex.run_commandline()
 nep_run.stop()
