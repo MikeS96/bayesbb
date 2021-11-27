@@ -67,7 +67,7 @@ class BayesianMnist(nn.Module):
         x = F.relu(x)
         x = self.l2(x)
         out = F.softmax(x, dim=1)
-        return out
+        return out, x
 
     def energy_loss(self, x: torch.Tensor, target: torch.Tensor, num_batches: int,
                     num_classes: int, samples: int) -> torch.Tensor:
@@ -86,7 +86,7 @@ class BayesianMnist(nn.Module):
         log_posteriors = torch.zeros(samples).to(x.device)
         log_likelihoods = torch.zeros(samples, batch_size).to(x.device)
         for i in range(samples):
-            outputs = self.forward(x)  # Forward pass
+            outputs, pre_softmax = self.forward(x)  # Forward pass
             outputs_to_save[i] = outputs.detach()
             log_priors[i] = self.log_prior  # Compute log prior of current forward pass
             log_posteriors[i] = self.log_posterior  # Compute log posterior of current forward pass
@@ -94,5 +94,15 @@ class BayesianMnist(nn.Module):
         total_loss = (1/num_batches)*(log_posteriors.mean() - log_priors.mean()) - log_likelihoods.mean(axis=0).sum()
         outputs_to_save = outputs_to_save.mean(axis=0)
         pred = outputs_to_save.argmax(axis=1)
-        accuracy = sum(pred == target).numpy()/len(target)
+        accuracy = sum(pred == target.to("cpu")).numpy()/len(target.to("cpu"))
         return total_loss, accuracy
+    
+    def inference(self, x: torch.Tensor, num_classes: int, num_samples: int ):
+        pre_softmax_array = np.array((samples, num_classes))
+        for i in range(num_samples):
+            outputs, pre_softmax = self.forward(x)
+            pre_softmax_array[i] = pre_softmax
+        softmax_sum = np.sum(pre_softmax_array, axis=0)/num_samples
+        entropy = np.sum(np.multiply(softmax_sum, np.log(softmax_sum)))
+        softmax_sum, entropy
+            

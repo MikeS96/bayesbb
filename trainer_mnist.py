@@ -19,7 +19,6 @@ from models.mnist import BayesianMnist
 
 ex = Experiment()
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_data = torchvision.datasets.MNIST(root="~/data", train=True,
                                         download=True,
                                         transform=transforms.Compose([
@@ -82,11 +81,12 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
                     y_test = y_test.to(device)
                     batch_test_loss, batch_test_accuracy = model.energy_loss(
                         x_test, y_test, num_test_batches, num_classes, elbo_samples)
-                    total_test_loss += batch_test_loss
+                    total_test_loss += batch_test_loss.item()
                 print(
-                    "batch number {} batch TEST loss: {} ".format(batch_number, batch_test_loss))
+                    "batch number {} batch TEST loss: {} ".format(batch_number, batch_test_loss.item()))
                 print(
-                    "batch number {} batch TEST acc: {} ".format(batch_number, batch_test_accuracy))
+                    "batch number {} batch TEST acc: {} ".format(
+                        batch_number, batch_test_accuracy.item()))
                 ex.log_scalar("batch test loss", loss.item())
                 ex.log_scalar("batch test accuracy", accuracy)
         print("total loss for epoch {} : {} ".format(epoch, epoch_loss))
