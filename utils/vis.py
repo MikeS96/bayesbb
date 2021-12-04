@@ -34,6 +34,42 @@ def weights_histogram(model) -> Tuple:
 
     return weights, biases
 
+def signal_noise(model):
+    # Initialize variables to store weights and biases of the model
+    weights_mu_list = []  # Only weights
+    weights_rho_list = []  # Only biases
+    biases_mu_list = []
+    biases_rho_list = []
+
+    for layer in model.children():
+        # Samples weights from layers
+        weights_mu = layer.w.mu.view(-1).cpu().detach().tolist()
+        weights_rho = layer.w.rho.view(-1).cpu().detach().tolist()
+        biases_mu = layer.b.mu.view(-1).cpu().detach().tolist()
+        biases_rho = layer.b.rho.view(-1).cpu().detach().tolist()
+
+        # Append weights to lists
+        weights_mu_list.extend(weights_mu)
+        weights_rho_list.extend(weights_rho)
+        biases_mu_list.extend(biases_mu)
+        biases_rho_list.extend(biases_rho)
+        
+    weights_mu_list = np.asarray(weights_mu_list)
+    weights_rho_list = np.asarray(weights_rho_list)
+    biases_mu_list = np.asarray(biases_mu_list)
+    biases_rho_list = np.asarray(biases_rho_list)
+
+
+    weights_sigma = np.log(np.exp(weights_rho_list) + 1)
+    biases_sigma = np.log(np.exp(biases_rho_list) + 1)
+
+    weights_ratio = np.abs(weights_mu_list) / weights_sigma
+    biases_ratio = np.abs(biases_mu_list) / biases_sigma
+    return weights_ratio, biases_ratio
+
+def plot_hist(values):
+    sns.histplot(data=values)
+    plt.show()
 
 def visualize_training(x_train: np.array, y_train: np.array, y_train_line: np.array) -> matplotlib.figure.Figure:
     """
@@ -86,3 +122,4 @@ def visualize_inference(x_train: np.array, y_train: np.array,
     plt.show()
 
     return fig
+

@@ -50,9 +50,10 @@ def config():
     cuda = False
 
 @ex.automain
-def train(elbo_samples, batch_size, num_epochs, cuda):
+def train(elbo_samples: int, batch_size: int, num_epochs: int,
+          cuda: bool, mixture_prior: bool, checkpoint_name: str = None):
     device = torch.device("cuda" if cuda else "cpu")
-    model = BayesianMnist(28 * 28).to(device)
+    model = BayesianMnist(28 * 28, mixture_prior=mixture_prior).to(device)
     optimiser = optim.Adam(model.parameters(), lr=0.01)
     num_classes = 10
     loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
@@ -104,5 +105,7 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
         ex.log_scalar("test loss", test_loss.item())
         ex.log_scalar("test accuracy", average_test_acc)
         ex.log_scalar("test entropy", total_entropy )
-
+        if checkpoint_name is not None:
+            torch.save(model.state_dict(), checkpoint_name + ".checkpoint")
+        
 nep_run.stop()
