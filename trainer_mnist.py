@@ -8,7 +8,7 @@ import torch.optim as optim
 import torchvision
 from torch.utils.data import DataLoader
 from torchvision import transforms
-
+import numpy as np
 from sacred import Experiment
 from sacred.observers import MongoObserver
 from sacred.observers import FileStorageObserver
@@ -28,6 +28,9 @@ test_data = torchvision.datasets.MNIST(root="~/data", train=False,
                                        download=True,
                                        transform=transforms.Compose([
                                            transforms.ToTensor()]))
+#subset = list(range(0, 100))
+#train_data = torch.utils.data.Subset(train_data, subset)
+#test_data = torch.utils.data.Subset(test_data, subset)
 
 
 @ex.config
@@ -41,8 +44,8 @@ def config():
         print("*****Observing runs*****")
     else:
         print("*****Not oberving runs*****")
-    num_epochs = 10
-    batch_size = 28
+    num_epochs = 100
+    batch_size = 100
     elbo_samples = 4
     cuda = False
 
@@ -56,10 +59,10 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
     loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=True, drop_last=True)
     num_train_batches = len(loader_train)
     num_test_batches = len(loader_test)
-
     for epoch in range(num_epochs):
-        batch_number = 0
-        epoch_loss = 0
+        train_loss = 0
+        total_accuracy = 0
+        num_train_batches = len(loader_train)
         for x_train, y_train in loader_train:
             x_train = x_train.reshape(batch_size, -1).to(device)
             y_train = y_train.to(device)
@@ -68,29 +71,38 @@ def train(elbo_samples, batch_size, num_epochs, cuda):
                 x_train, y_train, num_train_batches, num_classes, elbo_samples)
             loss.backward()
             optimiser.step()
-            epoch_loss += loss.item()
-            batch_number += 1
-            if batch_number % 400 == 0:
-                print("batch number: {} batch TRAIN loss: {} ".format(batch_number, loss.item()))
-                print("batch number: {} batch TRAIN accuracy: {} ".format(batch_number, accuracy))
-                ex.log_scalar("batch train loss", loss.item())
-                ex.log_scalar("batch train accuracy", accuracy)
-                total_test_loss = 0
-                for x_test, y_test in loader_test:
-                    x_test = x_test.reshape(batch_size, -1).to(device)
-                    y_test = y_test.to(device)
-                    batch_test_loss, batch_test_accuracy = model.energy_loss(
-                        x_test, y_test, num_test_batches, num_classes, elbo_samples)
-                    total_test_loss += batch_test_loss.item()
-                print(
-                    "batch number {} batch TEST loss: {} ".format(batch_number, batch_test_loss.item()))
-                print(
-                    "batch number {} batch TEST acc: {} ".format(
-                        batch_number, batch_test_accuracy.item()))
-                ex.log_scalar("batch test loss", loss.item())
-                ex.log_scalar("batch test accuracy", accuracy)
-        print("total loss for epoch {} : {} ".format(epoch, epoch_loss))
+            train_loss += loss.item()
+            total_accuracy += accuracy
+        epoch_accuracy = total_accuracy / num_train_batches
+        print("epoch number: {} TRAIN loss: {} ".format(epoch, train_loss))
+        print("epoch number: {} TRAIN accuracy: {} ".format(epoch, epoch_accuracy))
+        ex.log_scalar("train loss", loss.item())
+        ex.log_scalar("train accuracy", epoch_accuracy)
+        test_loss = 0
+        total_test_accuracy = 0
+        total_entropy = 0
+        num_test_batches = len(loader_test)
+        for x_test, y_test in loader_test:
+            x_test = x_test.reshape(batch_size, -1).to(device)
+            y_test = y_test.to(device)
+            test_loss, _ = model.energy_loss(
+                x_test, y_test, num_test_batches, num_classes, elbo_samples)
+            test_loss += test_loss.item()
+            softmax_averaged, entropy = model.inference(x_test, 10, elbo_samples, batch_size)
+            pred = softmax_averaged.argmax(axis=1)
+            accuracy = sum(pred == y_test.to("cpu").numpy())
+            total_test_accuracy += (accuracy / batch_size)
+            total_entropy += np.sum(entropy)
+        average_test_acc = total_test_accuracy/num_test_batches
+        
+        print(
+            "epoch number {} TEST loss: {} ".format(epoch, test_loss))
+        print(
+            "epoch number {} TEST acc: {} ".format(
+                epoch, average_test_acc.item()))
+        print("epoch number {} entropy {}".format(epoch, total_entropy))
+        ex.log_scalar("test loss", test_loss.item())
+        ex.log_scalar("test accuracy", average_test_acc)
+        ex.log_scalar("test entropy", total_entropy )
 
-
-ex.run_commandline()
 nep_run.stop()

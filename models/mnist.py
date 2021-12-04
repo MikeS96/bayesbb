@@ -12,7 +12,7 @@ from models.regression import BNNLinear
 
 class BayesianMnist(nn.Module):
     def __init__(self, input_dim: int = 784, output_dim: int = 10,
-                 hidden_dim: int = 200, var_gauss: int = 0.2,
+                 hidden_dim: int = 1200, var_gauss: int = 0.2,
                  mixture_params: Tuple = (0, 6, 1 / 4), normal_params: float = -3,
                  mixture_prior: bool = True) -> None:
         """
@@ -67,7 +67,7 @@ class BayesianMnist(nn.Module):
         x = F.relu(x)
         x = self.l2(x)
         out = F.softmax(x, dim=1)
-        return out, x
+        return out
 
     def energy_loss(self, x: torch.Tensor, target: torch.Tensor, num_batches: int,
                     num_classes: int, samples: int) -> torch.Tensor:
@@ -86,7 +86,7 @@ class BayesianMnist(nn.Module):
         log_posteriors = torch.zeros(samples).to(x.device)
         log_likelihoods = torch.zeros(samples, batch_size).to(x.device)
         for i in range(samples):
-            outputs, pre_softmax = self.forward(x)  # Forward pass
+            outputs = self.forward(x)  # Forward pass
             outputs_to_save[i] = outputs.detach()
             log_priors[i] = self.log_prior  # Compute log prior of current forward pass
             log_posteriors[i] = self.log_posterior  # Compute log posterior of current forward pass
@@ -97,12 +97,12 @@ class BayesianMnist(nn.Module):
         accuracy = sum(pred == target.to("cpu")).numpy()/len(target.to("cpu"))
         return total_loss, accuracy
     
-    def inference(self, x: torch.Tensor, num_classes: int, num_samples: int ):
-        pre_softmax_array = np.array((samples, num_classes))
+    def inference(self, x: torch.Tensor, num_classes: int, num_samples: int, batch_size: int):
+        outputs_sampled = np.zeros((batch_size, num_samples, num_classes))
         for i in range(num_samples):
-            outputs, pre_softmax = self.forward(x)
-            pre_softmax_array[i] = pre_softmax
-        softmax_sum = np.sum(pre_softmax_array, axis=0)/num_samples
-        entropy = np.sum(np.multiply(softmax_sum, np.log(softmax_sum)))
-        softmax_sum, entropy
+            outputs = self.forward(x)
+            outputs_sampled[:, i] = outputs.cpu().detach().numpy()
+        softmax_averaged = (np.sum(outputs_sampled, axis=1)/num_samples) + 1e-16
+        entropy = np.sum(np.multiply(softmax_averaged, np.log(softmax_averaged)), axis=1)
+        return softmax_averaged, entropy
             
