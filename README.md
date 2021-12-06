@@ -19,6 +19,7 @@ pip3 install neptune-client
 pip install neptune-sacred
 pip install sacred
 pip install pymango
+pip3 install tqdm
 ```
 
 Adding Neptune API KEY to variables
