@@ -35,3 +35,30 @@ class BaselineLinRegressorWithDropout(nn.Module):
         x = F.relu(self.dropout(self.l1(x)))
         out = self.l2(x)
         return out
+
+class BaselineMnist(nn.Module):
+    def __init__(self, input_dim: int = 784, output_dim: int = 10,
+                 hidden_dim: int = 1200) -> None:
+        """
+        :param input_dim: input dimension of the model (flattened image)
+        :param ouput_dim: output dimension of the model (num classes)
+        :param hidden_dim: Hidden dimension of the model
+        """
+        super().__init__()
+        self.l1 = torch.nn.Linear(in_features=input_dim,
+                            out_features=hidden_dim)
+        self.l2 = torch.nn.Linear(in_features=hidden_dim,
+                            out_features=output_dim)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of the model
+        :rtype: object
+        :param x: Input vector
+        :return: Output of the model
+        """
+        x = self.l1(x)
+        x = F.relu(x)
+        x = self.l2(x)
+        out = F.softmax(x, dim=1)
+        return out
