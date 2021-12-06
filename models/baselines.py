@@ -36,6 +36,24 @@ class BaselineLinRegressorWithDropout(nn.Module):
         out = self.l2(x)
         return out
 
+
+class BaselineEnsembleMethodRegression(nn.Module):
+    def __init__(self, device, num_models: int = 10) -> None:
+        """
+        :param num_models: number of models to use in the ensemble
+        """
+        super(BaselineEnsembleMethodRegression, self).__init__()
+        self.num_models = num_models
+        self.device = device
+        self.models = [BaselineLinearRegressor().to(device)
+                       for i in range(self.num_models)]
+
+    def forward(self, x):
+        out = torch.cat([model.forward(x) for model in self.models], dim=1)
+        out = torch.mean(out, dim=1)
+        return out
+
+
 class BaselineMnist(nn.Module):
     def __init__(self, input_dim: int = 784, output_dim: int = 10,
                  hidden_dim: int = 1200) -> None:
@@ -46,9 +64,9 @@ class BaselineMnist(nn.Module):
         """
         super().__init__()
         self.l1 = torch.nn.Linear(in_features=input_dim,
-                            out_features=hidden_dim)
+                                  out_features=hidden_dim)
         self.l2 = torch.nn.Linear(in_features=hidden_dim,
-                            out_features=output_dim)
+                                  out_features=output_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
