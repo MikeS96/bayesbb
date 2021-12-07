@@ -33,6 +33,8 @@ def weights_histogram(model) -> Tuple:
     axs[0].set(xlabel='Weights', ylabel='Count')
     axs[1].set(xlabel='Biases', ylabel='Count')
     axs[2].set(xlabel='Weights + Biases', ylabel='Count')
+    plt.autoscale(enable=True, axis='x', tight=True)
+    fig.tight_layout()
     plt.show()
 
     return weights, biases, fig
@@ -67,6 +69,8 @@ def deterministic_histogram(model):
     axs[0].set(xlabel='Weights', ylabel='Count')
     axs[1].set(xlabel='Biases', ylabel='Count')
     axs[2].set(xlabel='Weights + Biases', ylabel='Count')
+    plt.autoscale(enable=True, axis='x', tight=True)
+    fig.tight_layout()
     plt.show()
 
     return weights, biases, fig
@@ -125,6 +129,8 @@ def visualize_training(x_train: np.array, y_train: np.array, y_train_line: np.ar
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.legend()
+    plt.autoscale(enable=True, axis='x', tight=True)
+    fig.tight_layout()
     plt.show()
 
     return fig
@@ -164,6 +170,8 @@ def visualize_inference(x_train: np.array, y_train: np.array,
     plt.ylabel("Y")
     plt.legend()
     plt.title('Posterior Predictive mean with $2\sigma$')
+    plt.autoscale(enable=True, axis='x', tight=True)
+    fig.tight_layout()
     plt.show()
 
     return fig
@@ -192,6 +200,8 @@ def visualize_deterministic(x_train: np.array, y_train: np.array,
     plt.ylabel("Y")
     plt.legend()
     plt.title('Posterior Predictive mean with $2\sigma$')
+    plt.autoscale(enable=True, axis='x', tight=True)
+    fig.tight_layout()
     plt.show()
 
     return fig
