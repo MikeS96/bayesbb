@@ -20,6 +20,7 @@ pip install neptune-sacred
 pip install sacred
 pip install pymango
 pip3 install tqdm
+pip install -U scikit-learn
 ```
 
 Adding Neptune API KEY to variables

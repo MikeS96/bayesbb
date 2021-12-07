@@ -10,11 +10,12 @@ from models.layers import BNNLinear
 
 
 class BayesianRegressor(nn.Module):
-    def __init__(self, hidden_dim: int = 64, ll_var: float = 0.2,
+    def __init__(self, input_dim: int = 1, hidden_dim: int = 64, ll_var: float = 0.2,
                  mixture_params: Tuple = (0, 6, 1 / 4), normal_params: float = -3,
                  mixture_prior: bool = True) -> None:
         """
 
+        :param input_dim: Input dimension of the model
         :param hidden_dim: Hidden dimension of the model
         :param ll_var: Variance of the Normal likelihood
         :type mixture_params: Params for mixture of Gaussian's prior
@@ -22,9 +23,10 @@ class BayesianRegressor(nn.Module):
         :type mixture_prior: Bool to use mixture as prior or normal
         """
         super().__init__()
+        self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.ll_var = ll_var
-        self.l1 = BNNLinear(in_features=1, out_features=self.hidden_dim, mixture_params=mixture_params,
+        self.l1 = BNNLinear(in_features=self.input_dim, out_features=self.hidden_dim, mixture_params=mixture_params,
                             normal_params=normal_params, mixture_prior=mixture_prior)
         self.l2 = BNNLinear(in_features=self.hidden_dim, out_features=1, mixture_params=mixture_params,
                             normal_params=normal_params, mixture_prior=mixture_prior)
