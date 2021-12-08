@@ -47,11 +47,21 @@ class BaselineEnsembleMethodRegression(nn.Module):
         self.device = device
         self.models = [BaselineLinearRegressor().to(device)
                        for i in range(self.num_models)]
-
+    
+    def inference(self, x):
+        outputs_sampled = []
+        for model in self.models:
+            outputs_sampled.append(model.forward(x))
+        
+        outputs_sampled = torch.cat(outputs_sampled, dim=1)
+        out_mean = torch.mean(outputs_sampled, dim=1)
+        out_var = torch.var(outputs_sampled, dim=1)
+        return out_mean, out_var
+    
     def forward(self, x):
-        out = torch.cat([model.forward(x) for model in self.models], dim=1)
-        out = torch.mean(out, dim=1)
-        return out
+        out_mean, _ = self.inference(x)
+        return out_mean
+
 
 
 class BaselineMnist(nn.Module):
@@ -80,3 +90,29 @@ class BaselineMnist(nn.Module):
         x = self.l2(x)
         out = F.softmax(x, dim=1)
         return out
+
+
+class BaselineEnsembleMnist(nn.Module):
+    def __init__(self, device, num_models: int = 10) -> None:
+        """
+        :param num_models: number of models to use in the ensemble
+        """
+        super(BaselineEnsembleMnist, self).__init__()
+        self.num_models = num_models
+        self.device = device
+        self.models = [BaselineMnist().to(device)
+                       for i in range(self.num_models)]
+    
+    def inference(self, x):
+        outputs_sampled = []
+        for model in self.models:
+            outputs_sampled.append(model.forward(x))
+        
+        outputs_sampled = torch.cat(outputs_sampled, dim=1)
+        out_mean = torch.mean(outputs_sampled, dim=1)
+        out_var = torch.var(outputs_sampled, dim=1)
+        return out_mean, out_var
+    
+    def forward(self, x):
+        out_mean, _ = self.inference(x)
+        return out_mean
