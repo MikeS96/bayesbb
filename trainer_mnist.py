@@ -10,28 +10,14 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 import numpy as np
 from sacred import Experiment
-from sacred.observers import MongoObserver
 from sacred.observers import FileStorageObserver
 from neptune.new.integrations.sacred import NeptuneObserver
 import neptune.new as neptune
+import ddu_dirty_mnist
 
 from models.mnist import BayesianMnist
 
 ex = Experiment()
-
-train_data = torchvision.datasets.MNIST(root="~/data", train=True,
-                                        download=True,
-                                        transform=transforms.Compose([
-                                            transforms.ToTensor()]))
-
-test_data = torchvision.datasets.MNIST(root="~/data", train=False,
-                                       download=True,
-                                       transform=transforms.Compose([
-                                           transforms.ToTensor()]))
-#subset = list(range(0, 100))
-#train_data = torch.utils.data.Subset(train_data, subset)
-#test_data = torch.utils.data.Subset(test_data, subset)
-
 
 @ex.config
 def config():
@@ -47,17 +33,49 @@ def config():
     num_epochs = 100
     batch_size = 100
     elbo_samples = 4
-    cuda = False
+    train_samples = None
+    dirty_mnist = False
+    mixture_prior = True
+    lr = 0.01
+    cuda = True
 
 @ex.automain
-def train(elbo_samples: int, batch_size: int, num_epochs: int,
-          cuda: bool, mixture_prior: bool, checkpoint_name: str = None):
+def train(elbo_samples: int, batch_size: int, num_epochs: int, lr: float,
+          cuda: bool, mixture_prior: bool, checkpoint_name: str = None,
+          train_samples: int = None, dirty_mnist: bool = False):
+
     device = torch.device("cuda" if cuda else "cpu")
+    device_str = "cuda" if cuda else "cpu"
+    if dirty_mnist:
+        train_data = ddu_dirty_mnist.DirtyMNIST("~/data", train=True, download=True,
+                                               transform=transforms.Compose([
+                                                   transforms.Normalize((-0.0651),(0.8897))
+                                               ]), device=device_str)
+
+        test_data = ddu_dirty_mnist.DirtyMNIST("~/data", train=False, download=True,
+                                               transform=transforms.Compose([
+                                                   transforms.Normalize((-0.0651),(0.8897))
+                                               ]), device=device_str)
+    else:
+        train_data = torchvision.datasets.MNIST(root="~/data", train=True,
+                                        download=True,
+                                        transform=transforms.Compose([
+                                            transforms.ToTensor()]))
+
+        test_data = torchvision.datasets.MNIST(root="~/data", train=False,
+                                       download=True,
+                                       transform=transforms.Compose([
+                                           transforms.ToTensor()]))
+
     model = BayesianMnist(28 * 28, mixture_prior=mixture_prior).to(device)
-    optimiser = optim.Adam(model.parameters(), lr=0.01)
+    optimiser = optim.Adam(model.parameters(), lr=lr)
     num_classes = 10
+    if train_samples != None:
+        subset = list(range(0, train_samples))
+        train_data = torch.utils.data.Subset(train_data, subset)
     loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
     loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=True, drop_last=True)
+
     num_train_batches = len(loader_train)
     num_test_batches = len(loader_test)
     for epoch in range(num_epochs):
@@ -79,6 +97,7 @@ def train(elbo_samples: int, batch_size: int, num_epochs: int,
         print("epoch number: {} TRAIN accuracy: {} ".format(epoch, epoch_accuracy))
         ex.log_scalar("train loss", loss.item())
         ex.log_scalar("train accuracy", epoch_accuracy)
+        ex.log_scalar("train error", 1 - epoch_accuracy)
         test_loss = 0
         total_test_accuracy = 0
         total_entropy = 0
@@ -104,6 +123,7 @@ def train(elbo_samples: int, batch_size: int, num_epochs: int,
         print("epoch number {} entropy {}".format(epoch, total_entropy))
         ex.log_scalar("test loss", test_loss.item())
         ex.log_scalar("test accuracy", average_test_acc)
+        ex.log_scalar("test error", 1 - average_test_acc)
         ex.log_scalar("test entropy", total_entropy )
         if checkpoint_name is not None:
             torch.save(model.state_dict(), checkpoint_name + ".checkpoint")
