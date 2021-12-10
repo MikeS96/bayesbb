@@ -42,7 +42,7 @@ def config():
     mixture_prior = True
     lr = 0.01
     cuda = True
-    model_param = "drp" # "det", "ens", 
+    model_param = "ens" # "det", "ens", 
     
 
 @ex.automain
@@ -76,7 +76,7 @@ def train(elbo_samples: int, batch_size: int, num_epochs: int, lr: float,
                                            transforms.ToTensor()]))
     
     num_classes = 10
-    if model_param == "drp":
+    if model_param == "ens":
         bl_mnist_drp_model = BaselineMnistWithDropout().to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bl_mnist_drp_model.parameters(), lr=0.01)
