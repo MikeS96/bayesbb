@@ -8,7 +8,7 @@ import models.distributions as dist
 
 class BNNLinear(nn.Module):
     def __init__(self, in_features: int, out_features: int,
-                 mixture_params: Tuple = (0, 6, 1 / 4), normal_params: float = -3,
+                 mixture_params: Tuple = (0, 6, 1 / 4), normal_params: float = -1,
                  mixture_prior: bool = True) -> None:
         """
         Initialize Bayesian Linear Layer
