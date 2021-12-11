@@ -77,69 +77,158 @@ def train(elbo_samples: int, batch_size: int, num_epochs: int, lr: float,
     
     num_classes = 10
     if model_param == "ens":
-        bl_mnist_drp_model = BaselineMnistWithDropout().to(device)
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(bl_mnist_drp_model.parameters(), lr=0.01)
-        loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
-        loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=True, drop_last=True)
+        num_models = elbo_samples
+        bl_en_mnist = BaselineEnsembleMnist(device, num_models=num_models)
+        train_losses = np.zeros((num_models, num_epochs))
+        train_accs = np.zeros((num_models, num_epochs))
+        train_error = np.zeros((num_models, num_epochs))
+        test_losses = np.zeros((num_models, num_epochs))
+        test_accs = np.zeros((num_models, num_epochs))
+        test_error = np.zeros((num_models, num_epochs))
+        test_entropy = np.zeros((num_models, num_epochs))
+        for model_idx, curr_mnist_model in enumerate(bl_en_mnist.models):
+            criterion = nn.CrossEntropyLoss()
+            optimizer = optim.Adam(curr_mnist_model.parameters(), lr=0.01)
+            # num_classes = 10
+            # epochs = 3
+            # batch_size = 100
 
-        correct_preds = 0
-        total_acc = 0
-        for epoch in range(num_epochs):  # loop over the dataset multiple times
-            total_acc = 0
-            train_loss = 0
-            print(f"{loader_train=}")
-            bl_mnist_drp_model= bl_mnist_drp_model.train()
-            for x_train, y_train in loader_train:
-                x_train = x_train.reshape(batch_size, -1).to(device)
-                y_train = y_train.to(device)
-                optimizer.zero_grad()
-                output = bl_mnist_drp_model(x_train)
-                loss = criterion(output, y_train)
-                loss.backward()
-                optimizer.step()
-                train_loss += loss.item()
-                y_train_preds = output.max(1).indices
-                # print(f"{y_train_preds.shape=}")
-                # print(f"{y_train.shape=}")
-                correct_preds = sum(y_train_preds == y_train)
-                # print(f"{y_train_preds.shape=}")
-                total_acc += correct_preds/len(y_train)
-                # print(f"{total_acc=}")
-            epoch_accuracy = total_acc / len(loader_train)
-            print("epoch number: {} TRAIN loss: {} ".format(epoch, train_loss))
-            print("epoch number: {} TRAIN accuracy: {} ".format(epoch, epoch_accuracy))
-            ex.log_scalar("train loss", loss.item())
-            ex.log_scalar("train accuracy", epoch_accuracy)
-            ex.log_scalar("train error", 1 - epoch_accuracy)
-            # print('Finished Training')
+            loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
+            loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=True, drop_last=True)
 
-            test_loss = 0
-            total_test_acc = 0
-            bl_mnist_drp_model= bl_mnist_drp_model.eval()
-            for x_test, y_test in loader_test:
-                x_test = x_test.reshape(batch_size, -1).to(device)
-                y_test = y_test.to(device)
-                # optimizer.zero_grad()
-                output = bl_mnist_drp_model(x_test)
-                loss = criterion(output, y_test)
-                # loss.backward()
-                # optimizer.step()
-                test_loss += loss.item()
-                y_test_preds = output.max(1).indices
-                # print(f"{y_test_preds.shape=}")
-                # print(f"{y_test.shape=}")
-                correct_preds = sum(y_test_preds == y_test)
-                # print(f"{y_test_preds.shape=}")
-                total_test_acc += correct_preds/len(y_test)
-                # print(f"{total_test_acc=}")
-            epoch_accuracy = total_test_acc / len(loader_test)
-            print("epoch number: {} TEST loss: {} ".format(epoch, test_loss))
-            print("epoch number: {} TEST accuracy: {} ".format(epoch, epoch_accuracy))
-            ex.log_scalar("test loss", loss.item())
-            ex.log_scalar("test accuracy", epoch_accuracy)
-            ex.log_scalar("test error", 1 - epoch_accuracy)
-        print('Finished')
+            for epoch in range(num_epochs):  # loop over the dataset multiple times
+                total_acc = 0
+                train_loss = 0
+                for x_train, y_train in loader_train:
+                    x_train = x_train.reshape(batch_size, -1).to(device)
+                    y_train = y_train.to(device)
+                    optimizer.zero_grad()
+                    output = curr_mnist_model(x_train)
+                    loss = criterion(output, y_train)
+                    loss.backward()
+                    optimizer.step()
+                    train_loss += loss.item()
+                    y_train_preds = output.max(1).indices
+                    correct_preds = sum(y_train_preds == y_train)
+                    total_acc += correct_preds/len(y_train)
+                epoch_accuracy = total_acc / len(loader_train)
+                print(f"Model index: {model_idx}")
+                print("epoch number: {} TRAIN loss: {} ".format(epoch, train_loss))
+                print("epoch number: {} TRAIN accuracy: {} ".format(epoch, epoch_accuracy))
+                train_losses[model_idx][epoch] = loss.item()
+                train_accs[model_idx][epoch] = epoch_accuracy.item()
+                train_error[model_idx][epoch] = 1 - epoch_accuracy.item()
+                # print(f"{train_losses=}")
+                # print(f"{train_accs=}")
+
+                test_loss = 0
+                total_test_acc = 0
+                total_entropy = 0
+                for x_test, y_test in loader_test:
+                    x_test = x_test.reshape(batch_size, -1).to(device)
+                    y_test = y_test.to(device)
+
+                    softmax_averaged, entropy = bl_en_mnist.inference(x_test)
+                    softmax_averaged = torch.tensor(softmax_averaged).to(device)
+                    loss = criterion(softmax_averaged, y_test)
+
+                    test_loss += loss.item()
+
+                    y_test_preds = softmax_averaged.argmax(axis=1)
+                    # print(f"{y_test_preds.shape=}")
+                    # print(f"{y_test.shape=}")
+                    correct_preds = sum(y_test_preds == y_test)
+                    # print(f"{y_test_preds.shape=}")
+                    total_test_acc += correct_preds/len(y_test)
+                    total_entropy += entropy
+                    # print(f"{total_test_acc=}")
+                epoch_accuracy = total_test_acc / len(loader_test)
+                print("epoch number: {} TEST loss: {} ".format(epoch, test_loss))
+                print("epoch number: {} TEST accuracy: {} ".format(epoch, epoch_accuracy))
+                test_losses[model_idx][epoch] = loss.item()
+                test_accs[model_idx][epoch] = epoch_accuracy.item()
+                test_error[model_idx][epoch] = 1 - epoch_accuracy.item()
+                test_entropy[model_idx][epoch] = np.sum(total_entropy)
+
+
+            print('Model #{} Done Training'.format(model_idx))
+        print("Now logging stuff to neptune!")
+
+        for i in range(num_epochs):
+
+            ex.log_scalar("train loss", np.mean(train_losses[:,i]))
+            ex.log_scalar("train accuracy", np.mean(train_accs[:,i]))
+            ex.log_scalar("train error", np.mean(train_error[:,i]))
+            ex.log_scalar("test loss", np.mean(test_losses[:,i]))
+            ex.log_scalar("test accuracy", np.mean(test_accs[:,i]))
+            ex.log_scalar("test error", np.mean(test_error[:,i]))
+            ex.log_scalar("test entropy", np.mean(test_entropy[:,i]))
+
+
+
+        # bl_mnist_drp_model = BaselineMnistWithDropout().to(device)
+        # criterion = nn.CrossEntropyLoss()
+        # optimizer = optim.Adam(bl_mnist_drp_model.parameters(), lr=0.01)
+        # loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
+        # loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=True, drop_last=True)
+
+        # correct_preds = 0
+        # total_acc = 0
+        # for epoch in range(num_epochs):  # loop over the dataset multiple times
+        #     total_acc = 0
+        #     train_loss = 0
+        #     print(f"{loader_train=}")
+        #     bl_mnist_drp_model= bl_mnist_drp_model.train()
+        #     for x_train, y_train in loader_train:
+        #         x_train = x_train.reshape(batch_size, -1).to(device)
+        #         y_train = y_train.to(device)
+        #         optimizer.zero_grad()
+        #         output = bl_mnist_drp_model(x_train)
+        #         loss = criterion(output, y_train)
+        #         loss.backward()
+        #         optimizer.step()
+        #         train_loss += loss.item()
+        #         y_train_preds = output.max(1).indices
+        #         # print(f"{y_train_preds.shape=}")
+        #         # print(f"{y_train.shape=}")
+        #         correct_preds = sum(y_train_preds == y_train)
+        #         # print(f"{y_train_preds.shape=}")
+        #         total_acc += correct_preds/len(y_train)
+        #         # print(f"{total_acc=}")
+        #     epoch_accuracy = total_acc / len(loader_train)
+        #     print("epoch number: {} TRAIN loss: {} ".format(epoch, train_loss))
+        #     print("epoch number: {} TRAIN accuracy: {} ".format(epoch, epoch_accuracy))
+        #     ex.log_scalar("train loss", loss.item())
+        #     ex.log_scalar("train accuracy", epoch_accuracy)
+        #     ex.log_scalar("train error", 1 - epoch_accuracy)
+        #     # print('Finished Training')
+
+        #     test_loss = 0
+        #     total_test_acc = 0
+        #     bl_mnist_drp_model= bl_mnist_drp_model.eval()
+        #     for x_test, y_test in loader_test:
+        #         x_test = x_test.reshape(batch_size, -1).to(device)
+        #         y_test = y_test.to(device)
+        #         # optimizer.zero_grad()
+        #         output = bl_mnist_drp_model(x_test)
+        #         loss = criterion(output, y_test)
+        #         # loss.backward()
+        #         # optimizer.step()
+        #         test_loss += loss.item()
+        #         y_test_preds = output.max(1).indices
+        #         # print(f"{y_test_preds.shape=}")
+        #         # print(f"{y_test.shape=}")
+        #         correct_preds = sum(y_test_preds == y_test)
+        #         # print(f"{y_test_preds.shape=}")
+        #         total_test_acc += correct_preds/len(y_test)
+        #         # print(f"{total_test_acc=}")
+        #     epoch_accuracy = total_test_acc / len(loader_test)
+        #     print("epoch number: {} TEST loss: {} ".format(epoch, test_loss))
+        #     print("epoch number: {} TEST accuracy: {} ".format(epoch, epoch_accuracy))
+        #     ex.log_scalar("test loss", loss.item())
+        #     ex.log_scalar("test accuracy", epoch_accuracy)
+        #     ex.log_scalar("test error", 1 - epoch_accuracy)
+        # print('Finished')
     # num_classes = 10
     # if train_samples != None:
     #     subset = list(range(0, train_samples))
