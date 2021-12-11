@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.neptune
+sacred_files
+ali_runs.sh

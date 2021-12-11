@@ -24,7 +24,7 @@ def config():
     observe = True
     if observe:
         token = os.environ.get("NEPTUNE_API_TOKEN")
-        nep_run = neptune.init(api_token=token, project='bbb')
+        nep_run = neptune.init(api_token=token, project="pgm/mnistbl")
         ex.observers.append(FileStorageObserver("sacred_files"))
         ex.observers.append(NeptuneObserver(run=nep_run))
         print("*****Observing runs*****")
@@ -105,10 +105,12 @@ def train(elbo_samples: int, batch_size: int, num_epochs: int, lr: float,
         for x_test, y_test in loader_test:
             x_test = x_test.reshape(batch_size, -1).to(device)
             y_test = y_test.to(device)
+
             test_loss, _ = model.energy_loss(
                 x_test, y_test, num_test_batches, num_classes, elbo_samples)
             test_loss += test_loss.item()
             softmax_averaged, entropy = model.inference(x_test, 10, elbo_samples, batch_size)
+            
             pred = softmax_averaged.argmax(axis=1)
             accuracy = sum(pred == y_test.to("cpu").numpy())
             total_test_accuracy += (accuracy / batch_size)
