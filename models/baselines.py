@@ -73,6 +73,7 @@ class BaselineMnist(nn.Module):
         :param hidden_dim: Hidden dimension of the model
         """
         super().__init__()
+        self.num_classes = output_dim
         self.l1 = torch.nn.Linear(in_features=input_dim,
                                   out_features=hidden_dim)
         self.l2 = torch.nn.Linear(in_features=hidden_dim,
@@ -100,6 +101,7 @@ class BaselineMnistWithDropout(nn.Module):
         :param hidden_dim: Hidden dimension of the model
         """
         super().__init__()
+        
         self.l1 = torch.nn.Linear(in_features=input_dim,
                                   out_features=hidden_dim)
         self.l2 = torch.nn.Linear(in_features=hidden_dim,
@@ -129,16 +131,22 @@ class BaselineEnsembleMnist(nn.Module):
         self.device = device
         self.models = [BaselineMnist().to(device)
                        for i in range(self.num_models)]
+        self.num_classes = self.models[0].num_classes
     
     def inference(self, x):
-        outputs_sampled = []
-        for model in self.models:
-            outputs_sampled.append(model.forward(x))
-        
-        outputs_sampled = torch.cat(outputs_sampled, dim=1)
-        out_mean = torch.mean(outputs_sampled, dim=1)
-        out_var = torch.var(outputs_sampled, dim=1)
-        return out_mean, out_var
+        num_samples = len(self.models)
+        batch_size = x.shape[0]
+        num_classes = self.num_classes
+
+        outputs_sampled = np.zeros((batch_size, num_samples, num_classes))
+        for idx, model in enumerate(self.models):
+            curr_outputs = model.forward(x)
+            outputs_sampled[:, idx] = curr_outputs.cpu().detach().numpy()
+
+        softmax_averaged = (np.sum(outputs_sampled, axis=1)/num_samples) + 1e-16
+        entropy = np.sum(np.multiply(softmax_averaged, np.log(softmax_averaged)), axis=1)
+
+        return softmax_averaged, entropy
     
     def forward(self, x):
         out_mean, _ = self.inference(x)
