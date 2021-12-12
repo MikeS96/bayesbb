@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 from typing import Tuple
 
 plt.style.use('seaborn-white')
+plt.rcParams.update({'font.size': 16})
+plt.rc('figure', dpi=100)
+plt.rcParams['lines.linewidth'] = 2
 
 
 def weights_histogram(model) -> Tuple:
@@ -27,9 +30,9 @@ def weights_histogram(model) -> Tuple:
         biases.extend(b)
         params.extend(w + b)
     fig, axs = plt.subplots(ncols=3, figsize=(10, 6))
-    sns.histplot(data=np.array(weights), kde=True, ax=axs[0]).set(title='Histogram of Weights')
-    sns.histplot(data=np.array(biases), kde=True, ax=axs[1]).set(title='Histogram of Biases')
-    sns.histplot(data=np.array(params), kde=True, ax=axs[2]).set(title='Histogram of Parameters')
+    sns.histplot(data=np.array(weights), kde=True, ax=axs[0])  # .set(title='Histogram of Weights')
+    sns.histplot(data=np.array(biases), kde=True, ax=axs[1])  # .set(title='Histogram of Biases')
+    sns.histplot(data=np.array(params), kde=True, ax=axs[2])  # .set(title='Histogram of Parameters')
     axs[0].set(xlabel='Weights', ylabel='Count')
     axs[1].set(xlabel='Biases', ylabel='Count')
     axs[2].set(xlabel='Weights + Biases', ylabel='Count')
@@ -63,9 +66,9 @@ def deterministic_histogram(model):
             biases.extend(b)
         params.extend(param.view(-1).cpu().detach().tolist())
     fig, axs = plt.subplots(ncols=3, figsize=(10, 6))
-    sns.histplot(data=np.array(weights), kde=True, ax=axs[0]).set(title='Histogram of Weights')
-    sns.histplot(data=np.array(biases), kde=True, ax=axs[1]).set(title='Histogram of Biases')
-    sns.histplot(data=np.array(params), kde=True, ax=axs[2]).set(title='Histogram of Parameters')
+    sns.histplot(data=np.array(weights), kde=True, ax=axs[0])  # .set(title='Histogram of Weights')
+    sns.histplot(data=np.array(biases), kde=True, ax=axs[1])  # .set(title='Histogram of Biases')
+    sns.histplot(data=np.array(params), kde=True, ax=axs[2])  # .set(title='Histogram of Parameters')
     axs[0].set(xlabel='Weights', ylabel='Count')
     axs[1].set(xlabel='Biases', ylabel='Count')
     axs[2].set(xlabel='Weights + Biases', ylabel='Count')
@@ -125,10 +128,11 @@ def visualize_training(x_train: np.array, y_train: np.array, y_train_line: np.ar
     fig = plt.figure(figsize=(8, 6))
     plt.plot(x_train, y_train_line, label='True function')
     plt.scatter(x_train, y_train, label='Noisy data points', marker='x', color='k')
-    plt.title('Training data with {} samples'.format(x_train.shape[0]))
+    # plt.title('Training data with {} samples'.format(x_train.shape[0]))
     plt.xlabel("X")
     plt.ylabel("Y")
-    plt.legend()
+    plt.legend(bbox_to_anchor=(0, 1.02, 1, 0.2), loc="lower left",
+               mode="expand", borderaxespad=0, ncol=3)
     plt.autoscale(enable=True, axis='x', tight=True)
     fig.tight_layout()
     plt.show()
@@ -155,7 +159,7 @@ def visualize_inference(x_train: np.array, y_train: np.array,
     # Plot original training samples
     plt.scatter(x_train, y_train, color='k', marker='x', label='Training data')
     # Plot predictive mean of the model
-    plt.plot(x_test, predictive_mean, label='Mean Posterior Predictive')
+    plt.plot(x_test, predictive_mean, label='Predictive Mean')
     # Plot two standard deviations of the predictive stdv
     plt.fill_between(x_test.reshape(-1), predictive_mean + 2 * predictive_std, predictive_mean - 2 * predictive_std,
                      alpha=0.25, label='$2\sigma$')
@@ -168,8 +172,10 @@ def visualize_inference(x_train: np.array, y_train: np.array,
     plt.plot(x_test, y_test_true, color='r', label='Ground Truth')
     plt.xlabel("X")
     plt.ylabel("Y")
-    plt.legend()
-    plt.title('Posterior Predictive mean with $2\sigma$')
+    plt.legend(bbox_to_anchor=(0, 1.02, 1, 0.2), loc="lower left",
+               mode="expand", borderaxespad=0, ncol=3)
+    # plt.legend()
+    # plt.title('Posterior Predictive mean with $2\sigma$')
     plt.autoscale(enable=True, axis='x', tight=True)
     fig.tight_layout()
     plt.show()
@@ -193,13 +199,14 @@ def visualize_deterministic(x_train: np.array, y_train: np.array,
     # Plot original training samples
     plt.scatter(x_train, y_train, color='k', marker='x', label='Training data')
     # Plot predictive mean of the model
-    plt.plot(x_test, predictive_mean, label='Posterior Predictive Mean')
+    plt.plot(x_test, predictive_mean, label='Predictive Mean')
     # Ground truth
     plt.plot(x_test, y_test_true, color='r', label='Ground Truth')
     plt.xlabel("X")
     plt.ylabel("Y")
-    plt.legend()
-    plt.title('Posterior Predictive mean with $2\sigma$')
+    plt.legend(bbox_to_anchor=(0, 1.02, 1, 0.2), loc="lower left",
+               mode="expand", borderaxespad=0, ncol=3)
+    # plt.title('Posterior Predictive mean with $2\sigma$')
     plt.autoscale(enable=True, axis='x', tight=True)
     fig.tight_layout()
     plt.show()
