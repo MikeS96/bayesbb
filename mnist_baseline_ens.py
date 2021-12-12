@@ -112,7 +112,7 @@ def train(elbo_samples: int, batch_size: int, num_epochs: int, lr: float,
                     correct_preds = sum(y_train_preds == y_train)
                     total_acc += correct_preds/len(y_train)
                 epoch_accuracy = total_acc / len(loader_train)
-                print(f"Model index: {model_idx}")
+                print(f"Model index: {model_idx}/{len(bl_en_mnist.models)}")
                 print("epoch number: {} TRAIN loss: {} ".format(epoch, train_loss))
                 print("epoch number: {} TRAIN accuracy: {} ".format(epoch, epoch_accuracy))
                 train_losses[model_idx][epoch] = loss.item()
