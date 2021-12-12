@@ -12,11 +12,11 @@ ens_cm_df = pd.read_csv('assets/baselines/data/ens_clean_mnist_test_acc.csv')
 drp_cm_df = pd.read_csv('assets/baselines/data/drp_clean_mnist_test_acc.csv')
 det_cm_df = pd.read_csv('assets/baselines/data/det_clean_mnist_test_acc.csv')
 
-# We will take the values we want and put them in this dataframe 
+# We will take the values we want and put them in this dataframe
 cm_plot_df = pd.DataFrame()
-cm_plot_df['Ensemble'] = ens_cm_df.iloc[:,2]
-cm_plot_df['Dropout'] = drp_cm_df.iloc[:,2]
-cm_plot_df['Deterministic'] = det_cm_df.iloc[:,2]
+cm_plot_df['Ensemble'] = ens_cm_df.iloc[:, 2]
+cm_plot_df['Dropout'] = drp_cm_df.iloc[:, 2]
+cm_plot_df['Deterministic'] = det_cm_df.iloc[:, 2]
 
 # We can even edit df values, such as correcting for negative entropy
 # final_plot_df['Ensemble Mnist Test Entropy'] *= -1
@@ -27,23 +27,22 @@ drp_dm_df = pd.read_csv('assets/baselines/data/drp_dirty_mnist_test_acc.csv')
 det_dm_df = pd.read_csv('assets/baselines/data/det_dirty_mnist_test_acc.csv')
 
 
-# We will take the values we want and put them in this dataframe 
+# We will take the values we want and put them in this dataframe
 dm_plot_df = pd.DataFrame()
-dm_plot_df['Ensemble'] = ens_dm_df.iloc[:,2]
-dm_plot_df['Dropout'] = drp_dm_df.iloc[:,2]
-dm_plot_df['Deterministic'] = det_dm_df.iloc[:,2]
+dm_plot_df['Ensemble'] = ens_dm_df.iloc[:, 2]
+dm_plot_df['Dropout'] = drp_dm_df.iloc[:, 2]
+dm_plot_df['Deterministic'] = det_dm_df.iloc[:, 2]
 
-df_to_plot = {"clean_mnist_baslines": ["Clean Mnist", cm_plot_df], "dirty_mnist_baslines": ["Dirty Mnist", dm_plot_df]}
+df_to_plot = {"clean_mnist_baslines": [
+    "Clean Mnist", cm_plot_df], "dirty_mnist_baslines": ["Dirty Mnist", dm_plot_df]}
 
 # Plot both dataframes!
 for key, stuff in df_to_plot.items():
-    
+
     curr_label = stuff[0]
     df = stuff[1]
     # this adds some smoothing to the plot
-    df = df[df.index % 2 == 0] 
-
-
+    df = df[df.index % 2 == 0]
 
     # Naming the axes
     df.index.name = "Epochs"
@@ -53,7 +52,10 @@ for key, stuff in df_to_plot.items():
     plot_title = ''
     final_plot = px.line(
         df, title=plot_title,
-        width=400, height=250  , line_shape='spline', template='simple_white', labels= {'value': 'Test Accuracy'}
+        width=400, height=250,
+        line_shape='spline',
+        template='simple_white',
+        labels={'value': 'Test Accuracy'}
     )
 
     # Modify Apperance of the plot
@@ -75,7 +77,7 @@ for key, stuff in df_to_plot.items():
         )
     )
 
-    # # Remove grid and background 
+    # # Remove grid and background
     # final_plot.update_layout({
     # 'plot_bgcolor': 'rgba(255, 255, 255, 255)',
     # 'paper_bgcolor': 'rgba(255, 255, 255, 255)',
@@ -89,4 +91,3 @@ for key, stuff in df_to_plot.items():
 
     final_plot.show()
     final_plot.write_image(f"assets/baselines/figs/{key}.svg")
-
