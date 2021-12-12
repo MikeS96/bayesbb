@@ -20,8 +20,8 @@ det_dm_df = pd.read_csv('assets/baselines/data/det_dirty_mnist_test accuracy.csv
 final_plot_df = pd.DataFrame()
 final_plot_df['Ensemble'] = ens_dm_df['test accuracy']['values']
 # reading from csv files is different because sacred won't save logs :(
-final_plot_df['Dropout'] = drp_dm_df['0.7522141933441162']
-final_plot_df['Deterministic'] = det_dm_df['0.7595000863075256']
+final_plot_df['Dropout'] = drp_dm_df.iloc[:,2]
+final_plot_df['Deterministic'] = det_dm_df.iloc[:,2]
 
 # this adds some smoothing to the plot
 final_plot_df = final_plot_df[final_plot_df.index % 2 == 0] 
@@ -40,7 +40,7 @@ final_plot_df.columns.name = "Test Accuracy"
 plot_title = 'Baseline Ensemble Mnist Results'
 final_plot = px.line(
     final_plot_df, title=plot_title,
-    width=500, height=350  , line_shape='spline', 
+    width=500, height=350  , line_shape='spline', template='simple_white'
 )
 
 # Center Title
@@ -52,6 +52,13 @@ final_plot.update_layout(
         'xanchor': 'center',
         'yanchor': 'top'
         })
+
+# # Remove grid and background 
+# final_plot.update_layout({
+# 'plot_bgcolor': 'rgba(255, 255, 255, 255)',
+# 'paper_bgcolor': 'rgba(255, 255, 255, 255)',
+# 'mirror': 'True'
+# })
 
 # Other possible edits you can make to the graph
 # fig_thresh.update_yaxes(scaleanchor="x", scaleratio=1)
