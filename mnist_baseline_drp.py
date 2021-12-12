@@ -74,12 +74,12 @@ def train(elbo_samples: int, batch_size: int, num_epochs: int, lr: float,
                                        download=True,
                                        transform=transforms.Compose([
                                            transforms.ToTensor()]))
-    
+    print(f"{lr=}")
     num_classes = 10
     if model_param == "drp":
         bl_mnist_drp_model = BaselineMnistWithDropout().to(device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(bl_mnist_drp_model.parameters(), lr=0.01)
+        optimizer = optim.Adam(bl_mnist_drp_model.parameters(), lr=lr)
         loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True)
         loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=True, drop_last=True)
 

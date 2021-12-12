@@ -74,7 +74,7 @@ def train(elbo_samples: int, batch_size: int, num_epochs: int, lr: float,
                                        download=True,
                                        transform=transforms.Compose([
                                            transforms.ToTensor()]))
-    
+    print(f"{lr=}")
     num_classes = 10
     if model_param == "ens":
         num_models = elbo_samples
@@ -88,7 +88,7 @@ def train(elbo_samples: int, batch_size: int, num_epochs: int, lr: float,
         test_entropy = np.zeros((num_models, num_epochs))
         for model_idx, curr_mnist_model in enumerate(bl_en_mnist.models):
             criterion = nn.CrossEntropyLoss()
-            optimizer = optim.Adam(curr_mnist_model.parameters(), lr=0.01)
+            optimizer = optim.Adam(curr_mnist_model.parameters(), lr=lr)
             # num_classes = 10
             # epochs = 3
             # batch_size = 100
