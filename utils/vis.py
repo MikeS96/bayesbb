@@ -193,7 +193,7 @@ def visualize_deterministic(x_train: np.array, y_train: np.array,
     # Plot original training samples
     plt.scatter(x_train, y_train, color='k', marker='x', label='Training data')
     # Plot predictive mean of the model
-    plt.plot(x_test, predictive_mean, label='Mean Posterior Predictive')
+    plt.plot(x_test, predictive_mean, label='Posterior Predictive Mean')
     # Ground truth
     plt.plot(x_test, y_test_true, color='r', label='Ground Truth')
     plt.xlabel("X")
