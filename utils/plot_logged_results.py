@@ -37,21 +37,29 @@ final_plot_df.index.name = "Epochs"
 final_plot_df.columns.name = "Test Accuracy"
 
 # Add a title and/or other properties to the graph
-plot_title = 'Baseline Ensemble Mnist Results'
+plot_title = ''
 final_plot = px.line(
     final_plot_df, title=plot_title,
-    width=500, height=350  , line_shape='spline', template='simple_white'
+    width=400, height=250  , line_shape='spline', template='simple_white', labels= {'value': 'Test Accuracy'}
 )
 
-# Center Title
+# Modify Apperance of the plot
 final_plot.update_layout(
     title={
         'text': plot_title,
-        'y':0.8,
-        'x':0.45,
+        'y': 0.8,
+        'x': 0.45,
         'xanchor': 'center',
         'yanchor': 'top'
-        })
+    },
+    margin=dict(l=0, r=0, t=10, b=0),
+    legend=dict(
+        yanchor="bottom",
+        y=0.0,
+        xanchor="right",
+        x=1.0
+    )
+)
 
 # # Remove grid and background 
 # final_plot.update_layout({
@@ -66,4 +74,5 @@ final_plot.update_layout(
 # final_plot.update_xaxes(range=[0, 100], dtick = 5, constrain='domain')
 
 final_plot.show()
+final_plot.write_image('assets/baselines/data/dirty_mnist_baslines.svg')
 
